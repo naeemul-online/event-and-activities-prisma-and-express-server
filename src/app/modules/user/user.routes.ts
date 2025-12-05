@@ -5,6 +5,8 @@ import { UserValidation } from "./user.validation";
 
 const router = express.Router();
 
+router.get("/", UserController.getAllUser);
+
 router.post(
   "/register",
   fileUploader.upload.single("file"),

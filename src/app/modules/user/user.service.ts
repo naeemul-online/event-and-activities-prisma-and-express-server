@@ -28,6 +28,11 @@ const createUser = async (req: Request) => {
   return result;
 };
 
+const getAllUser = async (req: Request) => {
+  console.log("All users fetched");
+};
+
 export const UserService = {
   createUser,
+  getAllUser,
 };
