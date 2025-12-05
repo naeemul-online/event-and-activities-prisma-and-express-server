@@ -1,10 +1,10 @@
-import { UserRole } from "@prisma/client";
 import z from "zod";
+import { userRole } from "./user.interface";
 
 const createUserValidationSchema = z.object({
   email: z.email(),
   password: z.string(),
-  role: z.enum(UserRole).optional(),
+  role: z.enum(userRole).optional(),
   averageRating: z.number().optional(),
   profile: z.object({
     fullName: z.string().nonempty("Name is required"),
