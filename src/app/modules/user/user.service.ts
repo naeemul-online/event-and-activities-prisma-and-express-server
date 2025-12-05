@@ -6,12 +6,12 @@ import { prisma } from "../../shared/prisma";
 const createUser = async (req: Request) => {
   if (req.file) {
     const uploadResult = await fileUploader.uploadToCloudinary(req.file);
-    req.body.profile.image = uploadResult?.secure_url;
+    req.body.profile.image = uploadResult?.secure_url as string;
   }
 
   const hashPassword = await bcrypt.hash(req.body.password, 10);
 
-  const result = await prisma.$transaction(async (tnx) => {
+  const result = await prisma.$transaction(async (tnx: any) => {
     const newUser = await tnx.user.create({
       data: {
         email: req.body.email,

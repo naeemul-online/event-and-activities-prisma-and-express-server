@@ -3,22 +3,3 @@ enum UserRole {
     HOST
     ADMIN
 }
-
-enum EventStatus {
-    OPEN
-    FULL
-    CANCELLED
-    COMPLETED
-}
-
-enum ParticipantStatus {
-    JOINED
-    PENDING
-    CANCELLED
-}
-
-enum PaymentStatus {
-    PENDING
-    COMPLETED
-    FAILED
-}
