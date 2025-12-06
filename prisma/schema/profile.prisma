@@ -1,9 +1,9 @@
 model Profile {
-    id       Int     @id @default(autoincrement())
+    id       String  @id @default(uuid())
     fullName String
     bio      String?
     image    String?
     location String?
-    userId   Int     @unique
+    userId   String  @unique
     user     User    @relation(fields: [userId], references: [id])
 }

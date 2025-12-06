@@ -29,10 +29,21 @@ const createUser = async (req: Request) => {
 };
 
 const getAllUser = async (req: Request) => {
-  console.log("All users fetched");
+  const users = await prisma.user.findMany({
+    include: { profile: true },
+  });
+  return users;
+};
+
+const deleteUser = async (req: Request) => {
+  const result = await prisma.profile.delete({
+    where: { id: req.params.id },
+  });
+  return result;
 };
 
 export const UserService = {
   createUser,
   getAllUser,
+  deleteUser,
 };

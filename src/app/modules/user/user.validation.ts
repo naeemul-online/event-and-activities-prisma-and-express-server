@@ -5,7 +5,6 @@ const createUserValidationSchema = z.object({
   email: z.email(),
   password: z.string(),
   role: z.enum(userRole).optional(),
-  averageRating: z.number().optional(),
   profile: z.object({
     fullName: z.string().nonempty("Name is required"),
     bio: z.string().optional(),
