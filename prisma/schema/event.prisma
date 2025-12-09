@@ -1,1 +1,13 @@
-
+model Event {
+    id              String   @id @default(uuid())
+    title           String
+    description     String
+    date            DateTime
+    location        String
+    minParticipants Int
+    maxParticipants Int
+    hostId          String
+    categoryId      String
+    host            User     @relation("UserEvents", fields: [hostId], references: [id])
+    category        Category @relation(fields: [categoryId], references: [id])
+}

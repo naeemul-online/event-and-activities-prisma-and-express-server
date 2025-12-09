@@ -1,4 +1,6 @@
-export interface LoginPayload {
+import { UserRole } from "@prisma/client";
+
+export interface IJWTPayload {
   email: string;
-  password: string;
+  role: UserRole;
 }
