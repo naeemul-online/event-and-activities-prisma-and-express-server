@@ -7,16 +7,6 @@ import { UserValidation } from "./user.validation";
 
 const router = express.Router();
 
-// data with access token in cookie -> check the role -> give access to the protected route
-
-router.get("/", auth(UserRole.ADMIN), UserController.getAllUser);
-
-router.get(
-  "/me",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  UserController.getMyProfile
-);
-
 router.post(
   "/register",
   fileUploader.upload.single("file"),
@@ -27,6 +17,16 @@ router.post(
 
     return UserController.createUser(req, res, next);
   }
+);
+
+// data with access token in cookie -> check the role -> give access to the protected route
+
+router.get("/", auth(UserRole.ADMIN), UserController.getAllUser);
+
+router.get(
+  "/me",
+  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
+  UserController.getMyProfile
 );
 
 router.patch(
