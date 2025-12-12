@@ -1,13 +1,50 @@
 model Event {
-    id              String   @id @default(uuid())
-    title           String
-    description     String
-    date            DateTime
-    location        String
-    minParticipants Int
-    maxParticipants Int
-    hostId          String
-    categoryId      String
-    host            User     @relation("UserEvents", fields: [hostId], references: [id])
-    category        Category @relation(fields: [categoryId], references: [id])
+    id                String             @id @default(uuid())
+    title             String
+    description       String
+    date              DateTime
+    location          String
+    minParticipants   Int
+    maxParticipants   Int
+    hostId            String
+    categoryId        String
+    host              User               @relation("UserEvents", fields: [hostId], references: [id])
+    category          Category           @relation(fields: [categoryId], references: [id])
+    fee               Decimal            @default(0.0) @db.Decimal(10, 2)
+    currency          String             @default("USD")
+    image             String?
+    status            EventStatus        @default(OPEN)
+    createdAt         DateTime           @default(now())
+    updatedAt         DateTime           @updatedAt
+    eventParticipants EventParticipant[]
+    savedEvents       SavedEvent[]
+    payments          Payment[]
+    reviews           Review[]
+}
+
+model EventParticipant {
+    id       Int               @id @default(autoincrement())
+    event    Event             @relation(fields: [eventId], references: [id])
+    eventId  String
+    user     User              @relation(fields: [userId], references: [id])
+    userId   String
+    status   ParticipantStatus @default(PENDING)
+    joinedAt DateTime?         @default(now())
+
+    @@unique([eventId, userId])
+    @@index([userId])
+    @@index([eventId])
+}
+
+model SavedEvent {
+    id      Int      @id @default(autoincrement())
+    user    User     @relation(fields: [userId], references: [id])
+    userId  String
+    event   Event    @relation(fields: [eventId], references: [id])
+    eventId String
+    savedAt DateTime @default(now())
+
+    @@unique([userId, eventId])
+    @@index([userId])
+    @@index([eventId])
 }

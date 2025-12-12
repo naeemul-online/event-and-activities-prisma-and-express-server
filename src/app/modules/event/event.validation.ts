@@ -22,6 +22,8 @@ export const createEventSchema = z.object({
     .int()
     .min(10, "Maximum participants must be at least 1"),
   categoryId: z.string().uuid("Invalid categoryId (must be a UUID)"),
+  fee: z.number().optional(),
+  currency: z.string().optional(),
 });
 
 export const eventValidation = {

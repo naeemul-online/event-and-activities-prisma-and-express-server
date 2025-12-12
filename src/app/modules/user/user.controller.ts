@@ -3,6 +3,8 @@ import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
 import { IJWTPayload } from "../../types/common";
 import { UserService } from "./user.service";
+import pick from "../../helper/pick";
+import { userFilterableFields } from "./user.constant";
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.createUser(req);
@@ -14,8 +16,31 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const createInterest = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.createInterest(req);
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "Interest created successfully!",
+    data: result,
+  });
+});
+
 const getAllUser = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getAllUser(req);
+  const filters = pick(req.query, userFilterableFields);
+  const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+
+  const result = await UserService.getAllUser(filters, options);
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "All user retrieved successfully!",
+    data: result,
+  });
+});
+
+const getAllInterests = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getAllInterests(req);
   sendResponse(res, {
     statusCode: 201,
     success: true,
@@ -67,4 +92,6 @@ export const UserController = {
   getMyProfile,
   updateProfile,
   deleteUser,
+  createInterest,
+  getAllInterests,
 };

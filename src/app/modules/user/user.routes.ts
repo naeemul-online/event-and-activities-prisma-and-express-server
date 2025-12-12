@@ -19,9 +19,21 @@ router.post(
   }
 );
 
+router.post(
+  "/create-interest",
+  auth(UserRole.ADMIN),
+  UserController.createInterest
+);
+
 // data with access token in cookie -> check the role -> give access to the protected route
 
 router.get("/", auth(UserRole.ADMIN), UserController.getAllUser);
+
+router.get(
+  "/all-interests",
+  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
+  UserController.getAllInterests
+);
 
 router.get(
   "/me",
