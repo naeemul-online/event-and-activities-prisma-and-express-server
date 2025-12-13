@@ -17,7 +17,7 @@ app.post(
 
 app.use(
   cors({
-    origin: "http://localhost:3001",
+    origin: config.frontendUrl,
     credentials: true,
   })
 );

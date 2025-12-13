@@ -34,8 +34,15 @@ router.post(
 );
 
 router.post(
+  "/review",
+  auth(UserRole.USER),
+  validateRequest(eventValidation.createReviewSchema),
+  EventController.reviewEvent
+);
+
+router.post(
   "/create-event",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
+  auth(UserRole.HOST),
   fileUploader.upload.single("file"),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = eventValidation.createEventSchema.parse(

@@ -52,10 +52,10 @@ const createUser = async (req: Request) => {
 };
 
 const createInterest = async (req: Request) => {
+  const interestData = req.body as { name: string }[];
   const result = await prisma.interest.createMany({
-    data: {
-      name: req.body.name,
-    },
+    data: interestData,
+    skipDuplicates: true,
   });
 
   return result;

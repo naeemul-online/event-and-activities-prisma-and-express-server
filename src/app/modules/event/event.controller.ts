@@ -40,6 +40,18 @@ const joinEvent = catchAsync(
   }
 );
 
+const reviewEvent = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const review = await EventService.reviewEvent(req.user as IJWTPayload, req);
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Review successfully submitted",
+      data: review,
+    });
+  }
+);
+
 const getAllEvent = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, eventFilterableFields);
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
@@ -79,4 +91,5 @@ export const EventController = {
   getAllEvent,
   getSingleEvent,
   getAllCategory,
+  reviewEvent,
 };

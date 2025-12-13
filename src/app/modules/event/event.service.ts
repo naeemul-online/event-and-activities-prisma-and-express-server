@@ -51,6 +51,74 @@ const createEvent = async (user: IJWTPayload, req: Request) => {
   });
 };
 
+const reviewEvent = async (user: IJWTPayload, req: Request) => {
+  const reviewer = await prisma.user.findUnique({
+    where: {
+      email: user.email,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!reviewer) {
+    throw new Error("User not found");
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: req.body.eventId },
+    select: {
+      id: true,
+      date: true,
+      hostId: true,
+    },
+  });
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  if (new Date() < event.date) {
+    throw new Error("You can only review after the event ends");
+  }
+
+  const participant = await prisma.eventParticipant.findUnique({
+    where: {
+      eventId_userId: {
+        eventId: event.id,
+        userId: reviewer.id,
+      },
+    },
+  });
+
+  if (!participant || participant.status !== "JOINED") {
+    throw new Error("You can only review events you joined");
+  }
+
+  const existingReview = await prisma.review.findUnique({
+    where: {
+      eventId_userId: {
+        eventId: event.id,
+        userId: reviewer.id,
+      },
+    },
+  });
+
+  if (existingReview) {
+    throw new Error("You already reviewed this event");
+  }
+
+  return prisma.review.create({
+    data: {
+      eventId: req.body.eventId,
+      userId: reviewer.id,
+      hostId: event.hostId,
+      rating: req.body.rating,
+      comment: req.body.comment,
+    },
+  });
+};
+
 const joinEvent = async (user: IJWTPayload, req: Request) => {
   const { email } = user;
   const participantUser = await prisma.user.findUniqueOrThrow({
@@ -136,7 +204,7 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
     },
   });
 
-  return { paymentUrl: session.url, session: session };
+  return { paymentUrl: session.url };
 };
 
 const getAllEvent = async (params: any, options: IOptions) => {
@@ -246,4 +314,5 @@ export const EventService = {
   getAllEvent,
   getSingleEvent,
   getAllCategory,
+  reviewEvent,
 };

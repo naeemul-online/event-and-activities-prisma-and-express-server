@@ -14,7 +14,8 @@ const createUserValidationSchema = z.object({
   }),
   interestIds: z
     .array(z.number().int("Interest ID must be an integer"))
-    .min(1, "At least one interest must be selected"),
+    .min(1, "At least one interest must be selected")
+    .optional(),
 });
 
 export const UserValidation = {
