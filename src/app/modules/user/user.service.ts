@@ -1,8 +1,10 @@
 import bcrypt from "bcryptjs";
 import { Request } from "express";
 import { fileUploader } from "../../helper/fileUploader";
+import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { prisma } from "../../shared/prisma";
 import { IJWTPayload } from "../../types/common";
+import { userSearchableFields } from "./user.constant";
 
 const createUser = async (req: Request) => {
   if (req.file) {
@@ -10,30 +12,117 @@ const createUser = async (req: Request) => {
     req.body.profile.image = uploadResult?.secure_url as string;
   }
 
-  const hashPassword = await bcrypt.hash(req.body.password, 10);
+  const { email, password, role, profile, interestIds } = req.body;
+
+  const hashPassword = await bcrypt.hash(password, 10);
 
   const result = await prisma.$transaction(async (tnx: any) => {
     const newUser = await tnx.user.create({
       data: {
-        email: req.body.email,
+        email,
         password: hashPassword,
-        role: req.body.role,
-        averageRating: req.body.averageRating,
+        role: role || "USER",
       },
     });
-    return await tnx.profile.create({
-      data: { ...req.body.profile, userId: newUser.id },
+
+    const newProfile = await tnx.profile.create({
+      data: { ...profile, userId: newUser.id },
     });
+
+    // interestIds is an array of interest IDs -> create entries in userInterests table ->
+
+    if (interestIds && interestIds.length > 0) {
+      const userInterestData = interestIds.map((interestId: number) => ({
+        userId: newUser.id,
+        interestId,
+      }));
+
+      const newInterestData = await tnx.userInterest.createMany({
+        data: userInterestData,
+        skipDuplicates: true,
+      });
+
+      return { ...newUser, profile: newProfile, interests: newInterestData };
+    }
+
+    return newProfile;
   });
 
   return result;
 };
 
-const getAllUser = async (req: Request) => {
-  const users = await prisma.user.findMany({
-    include: { profile: true },
+const createInterest = async (req: Request) => {
+  const interestData = req.body as { name: string }[];
+  const result = await prisma.interest.createMany({
+    data: interestData,
+    skipDuplicates: true,
   });
+
+  return result;
+};
+
+const getAllInterests = async (req: Request) => {
+  const users = await prisma.interest.findMany();
   return users;
+};
+
+const getAllUser = async (params: any, options: IOptions) => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const { searchTerm, ...filtersData } = params;
+
+  const andConditions = [];
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: userSearchableFields.map((field) => ({
+        [field]: {
+          contains: searchTerm,
+          mode: "insensitive",
+        },
+      })),
+    });
+  }
+
+  if (Object.keys(filtersData).length > 0) {
+    andConditions.push({
+      AND: Object.keys(filtersData).map((key) => ({
+        [key]: {
+          equals: (filtersData as any)[key],
+        },
+      })),
+    });
+  }
+
+  const whereConditions =
+    andConditions.length > 0
+      ? {
+          AND: andConditions,
+        }
+      : {};
+
+  const result = await prisma.user.findMany({
+    skip,
+    take: limit,
+    where: whereConditions,
+    orderBy: {
+      [sortBy]: sortOrder,
+    },
+  });
+
+  const total = await prisma.user.count({
+    where: whereConditions,
+  });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: result,
+  };
 };
 
 const getMyProfile = async (payload: IJWTPayload) => {
@@ -79,4 +168,6 @@ export const UserService = {
   deleteUser,
   getMyProfile,
   updateProfile,
+  createInterest,
+  getAllInterests,
 };

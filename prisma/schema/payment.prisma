@@ -1,0 +1,19 @@
+model Payment {
+    id              Int           @id @default(autoincrement())
+    amount          Decimal       @db.Decimal(10, 2)
+    currency        String        @default("USD")
+    status          PaymentStatus @default(PENDING)
+    event           Event         @relation(fields: [eventId], references: [id])
+    eventId         String
+    user            User          @relation(fields: [userId], references: [id])
+    userId          String
+    paymentIntentId String?       @unique
+    transactionId   String? // gateway transaction id
+    provider        String? // e.g., stripe, sslcommerz, amarpay
+    metadata        Json? // store gateway response or metadata
+    createdAt       DateTime      @default(now())
+
+    @@index([userId])
+    @@index([eventId])
+    @@index([transactionId])
+}
