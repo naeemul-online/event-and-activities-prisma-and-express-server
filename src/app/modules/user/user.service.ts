@@ -1,3 +1,4 @@
+import httpStatus from "http-status";
 import bcrypt from "bcryptjs";
 import { Request } from "express";
 import { fileUploader } from "../../helper/fileUploader";
@@ -5,6 +6,7 @@ import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { prisma } from "../../shared/prisma";
 import { IJWTPayload } from "../../types/common";
 import { userSearchableFields } from "./user.constant";
+import ApiError from "../../errors/ApiError";
 
 const createUser = async (req: Request) => {
   if (req.file) {
@@ -45,7 +47,7 @@ const createUser = async (req: Request) => {
       return { ...newUser, profile: newProfile, interests: newInterestData };
     }
 
-    return newProfile;
+    return newUser;
   });
 
   return result;
@@ -109,6 +111,10 @@ const getAllUser = async (params: any, options: IOptions) => {
     orderBy: {
       [sortBy]: sortOrder,
     },
+    include: {
+      profile: true,
+      userInterests: true,
+    },
   });
 
   const total = await prisma.user.count({
@@ -143,7 +149,9 @@ const updateProfile = async (payload: IJWTPayload, req: Request) => {
     include: { profile: true },
   });
 
-  if (!user) throw new Error("User not found");
+  if (!user) {
+    throw new ApiError(httpStatus.CONFLICT, "Event is full");
+  }
 
   let updatedData = { ...req.body };
 

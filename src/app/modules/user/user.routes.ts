@@ -29,11 +29,7 @@ router.post(
 
 router.get("/", auth(UserRole.ADMIN), UserController.getAllUser);
 
-router.get(
-  "/all-interests",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  UserController.getAllInterests
-);
+router.get("/all-interests", UserController.getAllInterests);
 
 router.get(
   "/me",

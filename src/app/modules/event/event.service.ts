@@ -1,5 +1,7 @@
-import { EventStatus } from "@prisma/client";
+import { EventStatus, Prisma } from "@prisma/client";
 import { Request } from "express";
+import httpStatus from "http-status";
+import ApiError from "../../errors/ApiError";
 import { fileUploader } from "../../helper/fileUploader";
 import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { stripe } from "../../helper/stripe";
@@ -32,14 +34,14 @@ const createEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (!hostId) {
-    throw new Error("Host not found");
+    throw new ApiError(httpStatus.BAD_REQUEST, "Host not found");
   }
 
   return prisma.event.create({
     data: {
       title: req.body.title,
       description: req.body.description,
-      date: req.body.date,
+      date: new Date(req.body.date),
       location: req.body.location,
       minParticipants: req.body.minParticipants,
       maxParticipants: req.body.maxParticipants,
@@ -62,7 +64,7 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (!reviewer) {
-    throw new Error("User not found");
+    throw new ApiError(httpStatus.UNAUTHORIZED, "User not found");
   }
 
   const event = await prisma.event.findUnique({
@@ -75,11 +77,14 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (!event) {
-    throw new Error("Event not found");
+    throw new ApiError(httpStatus.NOT_FOUND, "Event not found");
   }
 
   if (new Date() < event.date) {
-    throw new Error("You can only review after the event ends");
+    throw new ApiError(
+      httpStatus.FORBIDDEN,
+      "You can only review after the event ends"
+    );
   }
 
   const participant = await prisma.eventParticipant.findUnique({
@@ -92,7 +97,10 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (!participant || participant.status !== "JOINED") {
-    throw new Error("You can only review events you joined");
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      "ou can only review events you joined"
+    );
   }
 
   const existingReview = await prisma.review.findUnique({
@@ -105,7 +113,7 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (existingReview) {
-    throw new Error("You already reviewed this event");
+    throw new ApiError(httpStatus.CONFLICT, "You already reviewed this event");
   }
 
   return prisma.review.create({
@@ -137,11 +145,11 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (!event) {
-    throw new Error("Event not found");
+    throw new ApiError(httpStatus.NOT_FOUND, "Event not found");
   }
 
   if (event.status !== EventStatus.OPEN) {
-    throw new Error("Event is not open");
+    throw new ApiError(httpStatus.NOT_FOUND, "Event is not open");
   }
 
   const existing = await prisma.eventParticipant.findUnique({
@@ -151,7 +159,7 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (existing) {
-    throw new Error("Already joined this event");
+    throw new ApiError(httpStatus.CONFLICT, "Already joined this event");
   }
 
   const participantCount = await prisma.eventParticipant.count({
@@ -159,7 +167,7 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
   });
 
   if (event.maxParticipants && participantCount >= event.maxParticipants) {
-    throw new Error("Event is full");
+    throw new ApiError(httpStatus.CONFLICT, "Event is full");
   }
 
   await prisma.eventParticipant.create({
@@ -211,18 +219,90 @@ const getAllEvent = async (params: any, options: IOptions) => {
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
 
-  const { searchTerm, ...filtersData } = params;
+  const {
+    searchTerm,
+    category,
+    categoryId,
+    location,
+    startDate,
+    endDate,
+    status,
+    ...filtersData
+  } = params;
 
-  const andConditions = [];
+  const andConditions: Prisma.EventWhereInput[] = [];
 
   if (searchTerm) {
     andConditions.push({
-      OR: eventSearchableFields.map((field) => ({
-        [field]: {
-          contains: searchTerm,
-          mode: "insensitive",
+      OR: [
+        ...eventSearchableFields.map((field) => ({
+          [field]: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        })),
+        {
+          host: {
+            is: {
+              email: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
         },
-      })),
+      ],
+    });
+  }
+
+  // 🚦 Status filter (OPEN, FULL, CANCELLED)
+  if (status) {
+    andConditions.push({
+      status: {
+        equals: status,
+      },
+    });
+  }
+
+  // if (category) {
+  //   andConditions.push({
+  //     category: {
+  //       is: {
+  //         name: {
+  //           contains: category,
+  //           mode: "insensitive",
+  //         },
+  //       },
+  //     },
+  //   });
+  // }
+
+  // 🏷 Category filter
+  if (categoryId) {
+    andConditions.push({
+      categoryId: {
+        equals: categoryId,
+      },
+    });
+  }
+
+  // 📍 Location filter
+  if (location) {
+    andConditions.push({
+      location: {
+        contains: location,
+        mode: "insensitive",
+      },
+    });
+  }
+
+  // 📅 Date filter
+  if (startDate || endDate) {
+    andConditions.push({
+      date: {
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate) }),
+      },
     });
   }
 
@@ -236,20 +316,14 @@ const getAllEvent = async (params: any, options: IOptions) => {
     });
   }
 
-  const whereConditions =
-    andConditions.length > 0
-      ? {
-          AND: andConditions,
-        }
-      : {};
+  const whereConditions: Prisma.EventWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
 
-  const result = await prisma.event.findMany({
+  const events = await prisma.event.findMany({
     skip,
     take: limit,
     where: whereConditions,
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
+    orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: "desc" },
     include: {
       category: {
         select: {
@@ -258,6 +332,7 @@ const getAllEvent = async (params: any, options: IOptions) => {
       },
       host: {
         select: {
+          email: true,
           profile: true,
         },
       },
@@ -274,7 +349,304 @@ const getAllEvent = async (params: any, options: IOptions) => {
       limit,
       total,
     },
-    data: result,
+    data: events,
+  };
+};
+
+const getMyEvents = async (hostId: string, params: any, options: IOptions) => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const {
+    searchTerm,
+    category,
+    categoryId,
+    location,
+    startDate,
+    endDate,
+    status,
+    ...filtersData
+  } = params;
+
+  const andConditions: Prisma.EventWhereInput[] = [];
+
+  // 🔐 Restrict to logged-in host
+  andConditions.push({
+    hostId: {
+      equals: hostId,
+    },
+  });
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        ...eventSearchableFields.map((field) => ({
+          [field]: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        })),
+        {
+          host: {
+            is: {
+              email: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  // 🚦 Status filter (OPEN, FULL, CANCELLED)
+  if (status) {
+    andConditions.push({
+      status: {
+        equals: status,
+      },
+    });
+  }
+
+  // if (category) {
+  //   andConditions.push({
+  //     category: {
+  //       is: {
+  //         name: {
+  //           contains: category,
+  //           mode: "insensitive",
+  //         },
+  //       },
+  //     },
+  //   });
+  // }
+
+  // 🏷 Category filter
+  if (categoryId) {
+    andConditions.push({
+      categoryId: {
+        equals: categoryId,
+      },
+    });
+  }
+
+  // 📍 Location filter
+  if (location) {
+    andConditions.push({
+      location: {
+        contains: location,
+        mode: "insensitive",
+      },
+    });
+  }
+
+  // 📅 Date filter
+  if (startDate || endDate) {
+    andConditions.push({
+      date: {
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate) }),
+      },
+    });
+  }
+
+  if (Object.keys(filtersData).length > 0) {
+    andConditions.push({
+      AND: Object.keys(filtersData).map((key) => ({
+        [key]: {
+          equals: (filtersData as any)[key],
+        },
+      })),
+    });
+  }
+
+  const whereConditions: Prisma.EventWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const events = await prisma.event.findMany({
+    skip,
+    take: limit,
+    where: whereConditions,
+    orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: "desc" },
+    include: {
+      category: {
+        select: {
+          name: true,
+        },
+      },
+      host: {
+        select: {
+          email: true,
+          profile: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.event.count({
+    where: whereConditions,
+  });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: events,
+  };
+};
+
+const getJoinEvents = async (
+  userId: string,
+  params: any,
+  options: IOptions
+) => {
+  const { page, limit, skip, sortBy, sortOrder } =
+    paginationHelper.calculatePagination(options);
+
+  const {
+    searchTerm,
+    category,
+    categoryId,
+    location,
+    startDate,
+    endDate,
+    status,
+    ...filtersData
+  } = params;
+
+  const andConditions: Prisma.EventWhereInput[] = [];
+
+  // 🔐 Restrict to logged-in host
+  // 🔐 Only events user joined
+  andConditions.push({
+    eventParticipants: {
+      some: {
+        userId: userId,
+      },
+    },
+  });
+
+  if (searchTerm) {
+    andConditions.push({
+      OR: [
+        ...eventSearchableFields.map((field) => ({
+          [field]: {
+            contains: searchTerm,
+            mode: "insensitive",
+          },
+        })),
+        {
+          host: {
+            is: {
+              email: {
+                contains: searchTerm,
+                mode: "insensitive",
+              },
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  // 🚦 Status filter (OPEN, FULL, CANCELLED)
+  if (status) {
+    andConditions.push({
+      status: {
+        equals: status,
+      },
+    });
+  }
+
+  // if (category) {
+  //   andConditions.push({
+  //     category: {
+  //       is: {
+  //         name: {
+  //           contains: category,
+  //           mode: "insensitive",
+  //         },
+  //       },
+  //     },
+  //   });
+  // }
+
+  // 🏷 Category filter
+  if (categoryId) {
+    andConditions.push({
+      categoryId: {
+        equals: categoryId,
+      },
+    });
+  }
+
+  // 📍 Location filter
+  if (location) {
+    andConditions.push({
+      location: {
+        contains: location,
+        mode: "insensitive",
+      },
+    });
+  }
+
+  // 📅 Date filter
+  if (startDate || endDate) {
+    andConditions.push({
+      date: {
+        ...(startDate && { gte: new Date(startDate) }),
+        ...(endDate && { lte: new Date(endDate) }),
+      },
+    });
+  }
+
+  if (Object.keys(filtersData).length > 0) {
+    andConditions.push({
+      AND: Object.keys(filtersData).map((key) => ({
+        [key]: {
+          equals: (filtersData as any)[key],
+        },
+      })),
+    });
+  }
+
+  const whereConditions: Prisma.EventWhereInput =
+    andConditions.length > 0 ? { AND: andConditions } : {};
+
+  const events = await prisma.event.findMany({
+    skip,
+    take: limit,
+    where: whereConditions,
+    orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: "desc" },
+    include: {
+      category: {
+        select: {
+          name: true,
+        },
+      },
+      host: {
+        select: {
+          email: true,
+          profile: true,
+        },
+      },
+    },
+  });
+
+  const total = await prisma.event.count({
+    where: whereConditions,
+  });
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+    },
+    data: events,
   };
 };
 
@@ -299,9 +671,54 @@ const getSingleEvent = async (req: Request) => {
 };
 
 const getAllCategory = async (req: Request) => {
-  const event = await prisma.category.findMany({
-    include: {
-      events: true,
+  const event = await prisma.category.findMany();
+  return event;
+};
+
+const updateEvent = async (user: IJWTPayload, req: Request) => {
+  if (req.file) {
+    const uploadResult = await fileUploader.uploadToCloudinary(req.file);
+    req.body.image = uploadResult?.secure_url as string;
+  }
+
+  const hostId = await prisma.user.findUnique({
+    where: {
+      email: user.email,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!hostId) {
+    throw new ApiError(httpStatus.NOT_FOUND, "Host not found!");
+  }
+
+  const result = await prisma.event.update({
+    where: {
+      id: req.params.id,
+    },
+    data: {
+      title: req.body.title,
+      description: req.body.description,
+      date: req.body.date,
+      location: req.body.location,
+      minParticipants: req.body.minParticipants,
+      maxParticipants: req.body.maxParticipants,
+      categoryId: req.body.categoryId,
+      hostId: hostId?.id,
+      fee: req.body.fee,
+      image: req.body.image,
+    },
+  });
+
+  return result;
+};
+
+const deleteEvent = async (req: Request) => {
+  const event = await prisma.event.delete({
+    where: {
+      id: req.params.id,
     },
   });
   return event;
@@ -315,4 +732,8 @@ export const EventService = {
   getSingleEvent,
   getAllCategory,
   reviewEvent,
+  updateEvent,
+  deleteEvent,
+  getMyEvents,
+  getJoinEvents,
 };
