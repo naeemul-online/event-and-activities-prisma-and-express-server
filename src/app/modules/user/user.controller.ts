@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import httpStatus from "http-status";
 import pick from "../../helper/pick";
 import catchAsync from "../../shared/catchAsync";
 import sendResponse from "../../shared/sendResponse";
@@ -66,11 +67,12 @@ const getMyProfile = catchAsync(
 const updateProfile = catchAsync(
   async (req: Request & { user?: IJWTPayload }, res: Response) => {
     const user = req.user;
+
     const result = await UserService.updateProfile(user as IJWTPayload, req);
     sendResponse(res, {
-      statusCode: 201,
+      statusCode: httpStatus.OK,
       success: true,
-      message: "Your profile updated successfully!",
+      message: "Profile updated successfully",
       data: result,
     });
   }

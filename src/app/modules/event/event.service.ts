@@ -24,19 +24,6 @@ const createEvent = async (user: IJWTPayload, req: Request) => {
     req.body.image = uploadResult?.secure_url as string;
   }
 
-  const hostId = await prisma.user.findUnique({
-    where: {
-      email: user.email,
-    },
-    select: {
-      id: true,
-    },
-  });
-
-  if (!hostId) {
-    throw new ApiError(httpStatus.BAD_REQUEST, "Host not found");
-  }
-
   return prisma.event.create({
     data: {
       title: req.body.title,
@@ -46,7 +33,7 @@ const createEvent = async (user: IJWTPayload, req: Request) => {
       minParticipants: req.body.minParticipants,
       maxParticipants: req.body.maxParticipants,
       categoryId: req.body.categoryId,
-      hostId: hostId?.id,
+      hostId: user.id,
       fee: req.body.fee,
       image: req.body.image,
     },
@@ -665,6 +652,7 @@ const getSingleEvent = async (req: Request) => {
           profile: true,
         },
       },
+      eventParticipants: true,
     },
   });
   return event;

@@ -22,7 +22,12 @@ const login = async (payload: { email: string; password: string }) => {
   }
 
   const accessToken = await jwtHelper.generateToken(
-    { id: user.id, email: user.email, role: user.role },
+    {
+      id: user.id,
+      name: user.profile?.fullName,
+      email: user.email,
+      role: user.role,
+    },
     config.jwt_access_token_secret!,
     "1d"
   );
@@ -39,6 +44,31 @@ const login = async (payload: { email: string; password: string }) => {
   };
 };
 
+const getMe = async (session: any) => {
+  const accessToken = session.accessToken;
+  const decodedData = jwtHelper.verifyToken(
+    accessToken,
+    config.jwt_access_token_secret as string
+  );
+
+  const userData = await prisma.user.findUniqueOrThrow({
+    where: {
+      email: decodedData.email,
+    },
+    include: { profile: true },
+  });
+
+  const { id, email, role, profile } = userData;
+
+  return {
+    id,
+    email,
+    role,
+    profile,
+  };
+};
+
 export const AuthService = {
   login,
+  getMe,
 };

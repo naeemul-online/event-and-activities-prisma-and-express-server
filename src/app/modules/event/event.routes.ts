@@ -24,11 +24,7 @@ router.get(
 
 router.get("/all-events-categories", EventController.getAllCategory);
 
-router.get(
-  "/:id",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  EventController.getSingleEvent
-);
+router.get("/:id", EventController.getSingleEvent);
 
 router.post(
   "/categories",
@@ -61,7 +57,7 @@ router.post("/:eventId/join", auth(UserRole.USER), EventController.joinEvent);
 
 router.patch(
   "/:id",
-  auth(UserRole.HOST),
+  auth(UserRole.HOST, UserRole.ADMIN),
   fileUploader.upload.single("file"),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = eventValidation.updateEventSchema.parse(

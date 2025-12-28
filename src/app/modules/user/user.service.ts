@@ -1,12 +1,24 @@
-import httpStatus from "http-status";
 import bcrypt from "bcryptjs";
 import { Request } from "express";
+import httpStatus from "http-status";
+import ApiError from "../../errors/ApiError";
 import { fileUploader } from "../../helper/fileUploader";
 import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { prisma } from "../../shared/prisma";
 import { IJWTPayload } from "../../types/common";
 import { userSearchableFields } from "./user.constant";
-import ApiError from "../../errors/ApiError";
+
+interface UpdateProfileInput {
+  email?: string;
+  password?: string;
+  role?: string;
+  profile?: {
+    fullName?: string;
+    bio?: string;
+    image?: string;
+    location?: string;
+  };
+}
 
 const createUser = async (req: Request) => {
   if (req.file) {
@@ -143,21 +155,52 @@ const getMyProfile = async (payload: IJWTPayload) => {
   return profile;
 };
 
-const updateProfile = async (payload: IJWTPayload, req: Request) => {
+const updateProfile = async (authUser: IJWTPayload, req: Request) => {
+  if (req.file) {
+    const uploadResult = await fileUploader.uploadToCloudinary(req.file);
+    req.body.profile.image = uploadResult?.secure_url as string;
+  }
+
   const user = await prisma.user.findUnique({
-    where: { email: payload.email },
+    where: { email: authUser.email },
     include: { profile: true },
   });
 
   if (!user) {
-    throw new ApiError(httpStatus.CONFLICT, "Event is full");
+    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
   }
 
-  let updatedData = { ...req.body };
+  const updateUserData: any = {};
+  const updateProfileData: any = {};
 
-  const result = await prisma.profile.update({
-    where: { id: user.profile?.id as string },
-    data: updatedData,
+  // 🔐 Password update (optional)
+  if (req.body.password) {
+    updateUserData.password = await bcrypt.hash(req.body.password, 10);
+  }
+
+  if (req.body.role) {
+    updateUserData.role = req.body.role;
+  }
+
+  // 🧾 Profile update
+  if (req.body.profile) {
+    Object.assign(updateProfileData, req.body.profile);
+  }
+
+  // 🔁 Transaction (important!)
+  const result = await prisma.$transaction(async (tx) => {
+    if (Object.keys(updateProfileData).length && user.profile?.id) {
+      await tx.profile.update({
+        where: { id: user.profile.id },
+        data: updateProfileData,
+      });
+    }
+
+    return tx.user.update({
+      where: { id: user.id },
+      data: updateUserData,
+      include: { profile: true },
+    });
   });
 
   return result;
