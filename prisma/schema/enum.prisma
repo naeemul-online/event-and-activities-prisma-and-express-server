@@ -20,12 +20,12 @@ enum EventStatus {
 enum ParticipantStatus {
     JOINED
     PENDING
-    CANCELLED
+    LEFT
 }
 
 enum PaymentStatus {
     PENDING
-    UNPAID
     PAID
-    FAILED
+    CANCELLED
+    REFUNDED
 }

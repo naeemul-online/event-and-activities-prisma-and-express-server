@@ -1,10 +1,15 @@
-import { EventStatus, Prisma } from "@prisma/client";
+import {
+  EventStatus,
+  ParticipantStatus,
+  PaymentStatus,
+  Prisma,
+} from "@prisma/client";
 import { Request } from "express";
 import httpStatus from "http-status";
 import ApiError from "../../errors/ApiError";
 import { fileUploader } from "../../helper/fileUploader";
 import { IOptions, paginationHelper } from "../../helper/paginationHelper";
-import { stripe } from "../../helper/stripe";
+import { createStripeSession } from "../../helper/stripe";
 import { prisma } from "../../shared/prisma";
 import { IJWTPayload } from "../../types/common";
 import { eventSearchableFields } from "./event.constant";
@@ -116,19 +121,19 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
 
 const joinEvent = async (user: IJWTPayload, req: Request) => {
   const { email } = user;
-  const participantUser = await prisma.user.findUniqueOrThrow({
-    where: {
-      email: email,
-    },
+  const { eventId } = req.params;
+
+  // 1️⃣ Get user
+  const dbUser = await prisma.user.findUniqueOrThrow({
+    where: { email },
+    select: { id: true },
   });
 
-  const userId = participantUser.id;
-  const eventId = req.params.eventId;
+  const userId = dbUser.id;
 
+  // 2️⃣ Get event
   const event = await prisma.event.findUnique({
-    where: {
-      id: eventId,
-    },
+    where: { id: eventId },
   });
 
   if (!event) {
@@ -136,35 +141,86 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
   }
 
   if (event.status !== EventStatus.OPEN) {
-    throw new ApiError(httpStatus.NOT_FOUND, "Event is not open");
+    throw new ApiError(httpStatus.BAD_REQUEST, "Event is not open");
   }
 
-  const existing = await prisma.eventParticipant.findUnique({
+  // 3️⃣ Check participant
+  const participant = await prisma.eventParticipant.findUnique({
     where: {
       eventId_userId: { eventId, userId },
     },
   });
 
-  if (existing) {
-    throw new ApiError(httpStatus.CONFLICT, "Already joined this event");
-  }
-
-  const participantCount = await prisma.eventParticipant.count({
-    where: { eventId, status: "JOINED" },
+  // 4️⃣ Get latest payment (if exists)
+  const latestPayment = await prisma.payment.findFirst({
+    where: { eventId, userId },
+    orderBy: { createdAt: "desc" },
   });
 
-  if (event.maxParticipants && participantCount >= event.maxParticipants) {
-    throw new ApiError(httpStatus.CONFLICT, "Event is full");
+  console.log(latestPayment);
+
+  /**
+   * 🔁 ALREADY EXISTS CASE
+   */
+  if (participant) {
+    // 🟢 Paid already
+    if (latestPayment?.status === "PAID") {
+      throw new ApiError(
+        httpStatus.CONFLICT,
+        "You have already joined this event"
+      );
+    }
+
+    // 🟡 Payment pending → redirect again
+    if (latestPayment?.status === "PENDING") {
+      const session = await createStripeSession({
+        event,
+        paymentId: latestPayment.id,
+        userId,
+        eventId,
+      });
+
+      return {
+        success: true,
+        message: "Payment pending. Redirecting to payment.",
+        data: {
+          paymentUrl: session.url,
+          paymentStatus: "PENDING",
+        },
+      };
+    }
   }
 
-  await prisma.eventParticipant.create({
-    data: {
+  /**
+   * 🧮 Capacity check (ONLY JOINED)
+   */
+  const joinedCount = await prisma.eventParticipant.count({
+    where: {
       eventId,
-      userId,
-      status: "PENDING",
+      status: "JOINED",
     },
   });
 
+  if (event.maxParticipants && joinedCount >= event.maxParticipants) {
+    throw new ApiError(httpStatus.CONFLICT, "Event is full");
+  }
+
+  /**
+   * 🆕 Create participant if not exists
+   */
+  if (!participant) {
+    await prisma.eventParticipant.create({
+      data: {
+        eventId,
+        userId,
+        status: "PENDING",
+      },
+    });
+  }
+
+  /**
+   * 💳 Create new payment
+   */
   const payment = await prisma.payment.create({
     data: {
       eventId,
@@ -175,31 +231,21 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
     },
   });
 
-  const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: event.currency.toLowerCase(),
-          product_data: {
-            name: event.title,
-          },
-          unit_amount: Number(event.fee) * 100, // cents
-        },
-        quantity: 1,
-      },
-    ],
-    success_url: `https://www.linkedin.com`,
-    cancel_url: `https://www.facebook.com/`,
-    metadata: {
-      paymentId: payment.id,
-      userId,
-      eventId,
-    },
+  const session = await createStripeSession({
+    event,
+    paymentId: payment.id,
+    userId,
+    eventId,
   });
 
-  return { paymentUrl: session.url };
+  return {
+    success: true,
+    message: "Redirecting to payment",
+    data: {
+      paymentUrl: session.url,
+      paymentStatus: "NEW",
+    },
+  };
 };
 
 const getAllEvent = async (params: any, options: IOptions) => {
@@ -485,7 +531,7 @@ const getMyEvents = async (hostId: string, params: any, options: IOptions) => {
   };
 };
 
-const getJoinEvents = async (
+const getUserJoinEvents = async (
   userId: string,
   params: any,
   options: IOptions
@@ -548,19 +594,6 @@ const getJoinEvents = async (
     });
   }
 
-  // if (category) {
-  //   andConditions.push({
-  //     category: {
-  //       is: {
-  //         name: {
-  //           contains: category,
-  //           mode: "insensitive",
-  //         },
-  //       },
-  //     },
-  //   });
-  // }
-
   // 🏷 Category filter
   if (categoryId) {
     andConditions.push({
@@ -610,9 +643,7 @@ const getJoinEvents = async (
     orderBy: sortBy ? { [sortBy]: sortOrder } : { createdAt: "desc" },
     include: {
       category: {
-        select: {
-          name: true,
-        },
+        select: { name: true },
       },
       host: {
         select: {
@@ -620,7 +651,34 @@ const getJoinEvents = async (
           profile: true,
         },
       },
+      payments: {
+        where: { userId },
+        select: {
+          status: true,
+          id: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 1,
+      },
     },
+  });
+
+  const formattedEvents = events.map((event) => {
+    const payment = event.payments[0] || null;
+
+    return {
+      ...event,
+      paymentStatus: payment?.status ?? "PENDING",
+      payment: payment
+        ? {
+            id: payment.id,
+            status: payment.status,
+          }
+        : null,
+      payments: undefined,
+    };
   });
 
   const total = await prisma.event.count({
@@ -633,12 +691,14 @@ const getJoinEvents = async (
       limit,
       total,
     },
-    data: events,
+    data: formattedEvents,
   };
 };
 
-const getSingleEvent = async (req: Request) => {
+const getSingleEvent = async (req: Request & { user?: any }) => {
   const { id } = req.params;
+  const userId = req.user?.id;
+
   const event = await prisma.event.findUniqueOrThrow({
     where: { id },
     include: {
@@ -653,9 +713,88 @@ const getSingleEvent = async (req: Request) => {
         },
       },
       eventParticipants: true,
+      payments: userId
+        ? {
+            where: { userId },
+            select: { status: true },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          }
+        : false,
     },
   });
-  return event;
+  return {
+    ...event,
+
+    paymentStatus: event.payments?.[0]?.status ?? null,
+  };
+};
+
+const leaveEvent = async (user: IJWTPayload, req: Request) => {
+  const { email } = user;
+  const { eventId } = req.params;
+
+  const dbUser = await prisma.user.findUniqueOrThrow({
+    where: { email },
+    select: { id: true },
+  });
+
+  const userId = dbUser.id;
+
+  // Participant check
+  const participant = await prisma.eventParticipant.findUnique({
+    where: {
+      eventId_userId: { eventId, userId },
+    },
+  });
+
+  if (!participant) {
+    throw new ApiError(httpStatus.NOT_FOUND, "You are not part of this event");
+  }
+
+  // Event check
+  const event = await prisma.event.findUniqueOrThrow({
+    where: { id: eventId },
+  });
+
+  if (event.date < new Date()) {
+    throw new ApiError(httpStatus.BAD_REQUEST, "You cannot leave a past event");
+  }
+
+  // Latest payment
+  const payment = await prisma.payment.findFirst({
+    where: { eventId, userId },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Transaction for consistency
+  await prisma.$transaction(async (tx) => {
+    await tx.eventParticipant.update({
+      where: {
+        eventId_userId: { eventId, userId },
+      },
+      data: {
+        status: ParticipantStatus.LEFT,
+      },
+    });
+
+    if (payment) {
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status:
+            payment.status === "PAID"
+              ? PaymentStatus.REFUNDED
+              : PaymentStatus.CANCELLED,
+        },
+      });
+    }
+  });
+
+  return {
+    success: true,
+    message: "You have left the event successfully",
+  };
 };
 
 const getAllCategory = async (req: Request) => {
@@ -723,5 +862,6 @@ export const EventService = {
   updateEvent,
   deleteEvent,
   getMyEvents,
-  getJoinEvents,
+  getUserJoinEvents,
+  leaveEvent,
 };

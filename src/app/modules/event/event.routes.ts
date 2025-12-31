@@ -2,6 +2,7 @@ import { UserRole } from "@prisma/client";
 import express, { NextFunction, Request, Response } from "express";
 import { fileUploader } from "../../helper/fileUploader";
 import auth from "../../middlewares/auth";
+import optionalAuth from "../../middlewares/optionalAuth";
 import validateRequest from "../../middlewares/validateRequest";
 import { EventController } from "./event.controller";
 import { eventValidation } from "./event.validation";
@@ -24,7 +25,7 @@ router.get(
 
 router.get("/all-events-categories", EventController.getAllCategory);
 
-router.get("/:id", EventController.getSingleEvent);
+router.get("/:id", optionalAuth(), EventController.getSingleEvent);
 
 router.post(
   "/categories",
@@ -54,6 +55,8 @@ router.post(
 );
 
 router.post("/:eventId/join", auth(UserRole.USER), EventController.joinEvent);
+
+router.post("/:eventId/leave", auth(UserRole.USER), EventController.leaveEvent);
 
 router.patch(
   "/:id",

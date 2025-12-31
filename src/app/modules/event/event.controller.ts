@@ -34,8 +34,20 @@ const joinEvent = catchAsync(
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: "Event join successfully",
-      data: event,
+      message: "Please pay for join successfully",
+      data: event.data,
+    });
+  }
+);
+
+const leaveEvent = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const event = await EventService.leaveEvent(req.user as IJWTPayload, req);
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Please pay for join successfully",
+      data: event.message,
     });
   }
 );
@@ -85,14 +97,18 @@ const getMyEvent = catchAsync(
 const getJoinedEvents = catchAsync(
   async (req: Request & { user?: IJWTPayload }, res: Response) => {
     const user = req.user;
-    console.log(user);
+
     const filters = pick(req.query, eventFilterableFields);
     const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
-    const event = await EventService.getJoinEvents(user!.id, filters, options);
+    const event = await EventService.getUserJoinEvents(
+      user!.id,
+      filters,
+      options
+    );
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: "Joined events retrieved successfully",
+      message: "Your Joined events retrieved successfully",
       meta: event.meta,
       data: event.data,
     });
@@ -153,4 +169,5 @@ export const EventController = {
   updateEvent,
   getMyEvent,
   getJoinedEvents,
+  leaveEvent,
 };
