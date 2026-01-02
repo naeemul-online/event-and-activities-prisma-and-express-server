@@ -58,6 +58,8 @@ const getMe = async (session: any) => {
     include: { profile: true },
   });
 
+  console.log(userData);
+
   const { id, email, role, profile } = userData;
 
   return {

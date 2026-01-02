@@ -76,6 +76,15 @@ const getAllEvent = catchAsync(async (req: Request, res: Response) => {
     data: event.data,
   });
 });
+const getAllReview = catchAsync(async (req: Request, res: Response) => {
+  const reviews = await EventService.getAllReview();
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "All reviews Retrieved Successfully",
+    data: reviews,
+  });
+});
 
 const getMyEvent = catchAsync(
   async (req: Request & { user?: IJWTPayload }, res: Response) => {
@@ -170,4 +179,5 @@ export const EventController = {
   getMyEvent,
   getJoinedEvents,
   leaveEvent,
+  getAllReview,
 };

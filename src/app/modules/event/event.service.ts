@@ -48,10 +48,11 @@ const createEvent = async (user: IJWTPayload, req: Request) => {
 const reviewEvent = async (user: IJWTPayload, req: Request) => {
   const reviewer = await prisma.user.findUnique({
     where: {
-      email: user.email,
+      id: user.id,
     },
     select: {
       id: true,
+      profile: true,
     },
   });
 
@@ -91,7 +92,7 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   if (!participant || participant.status !== "JOINED") {
     throw new ApiError(
       httpStatus.CONFLICT,
-      "ou can only review events you joined"
+      "You can only review events you joined"
     );
   }
 
@@ -248,6 +249,10 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
   };
 };
 
+const getAllReview = async () => {
+  const reviews = await prisma.review.findMany();
+  return reviews;
+};
 const getAllEvent = async (params: any, options: IOptions) => {
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
@@ -369,6 +374,7 @@ const getAllEvent = async (params: any, options: IOptions) => {
           profile: true,
         },
       },
+      reviews: true,
     },
   });
 
@@ -707,6 +713,18 @@ const getSingleEvent = async (req: Request & { user?: any }) => {
           name: true,
         },
       },
+      reviews: {
+        include: {
+          reviewer: {
+            select: {
+              id: true,
+              email: true,
+              role: true,
+              profile: true,
+            },
+          },
+        },
+      },
       host: {
         select: {
           profile: true,
@@ -859,6 +877,7 @@ export const EventService = {
   getSingleEvent,
   getAllCategory,
   reviewEvent,
+  getAllReview,
   updateEvent,
   deleteEvent,
   getMyEvents,

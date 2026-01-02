@@ -9,11 +9,8 @@ import { eventValidation } from "./event.validation";
 
 const router = express.Router();
 
-router.get(
-  "/all-events",
-
-  EventController.getAllEvent
-);
+router.get("/all-events", EventController.getAllEvent);
+router.get("/all-reviews", EventController.getAllReview);
 
 router.get("/my-events", auth(UserRole.HOST), EventController.getMyEvent);
 
