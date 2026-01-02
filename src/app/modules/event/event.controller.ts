@@ -34,8 +34,20 @@ const joinEvent = catchAsync(
     sendResponse(res, {
       statusCode: 201,
       success: true,
-      message: "Event join successfully",
-      data: event,
+      message: "Please pay for join successfully",
+      data: event.data,
+    });
+  }
+);
+
+const leaveEvent = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const event = await EventService.leaveEvent(req.user as IJWTPayload, req);
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Please pay for join successfully",
+      data: event.message,
     });
   }
 );
@@ -60,9 +72,57 @@ const getAllEvent = catchAsync(async (req: Request, res: Response) => {
     statusCode: 201,
     success: true,
     message: "All Event Retrieved Successfully",
-    data: event,
+    meta: event.meta,
+    data: event.data,
   });
 });
+const getAllReview = catchAsync(async (req: Request, res: Response) => {
+  const reviews = await EventService.getAllReview();
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "All reviews Retrieved Successfully",
+    data: reviews,
+  });
+});
+
+const getMyEvent = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const user = req.user;
+    console.log(user);
+    const filters = pick(req.query, eventFilterableFields);
+    const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+    const event = await EventService.getMyEvents(user!.id, filters, options);
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "My Events Retrieved Successfully",
+      meta: event.meta,
+      data: event.data,
+    });
+  }
+);
+
+const getJoinedEvents = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const user = req.user;
+
+    const filters = pick(req.query, eventFilterableFields);
+    const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
+    const event = await EventService.getUserJoinEvents(
+      user!.id,
+      filters,
+      options
+    );
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Your Joined events retrieved successfully",
+      meta: event.meta,
+      data: event.data,
+    });
+  }
+);
 
 const getSingleEvent = catchAsync(async (req: Request, res: Response) => {
   const event = await EventService.getSingleEvent(req);
@@ -84,6 +144,28 @@ const getAllCategory = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const updateEvent = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const event = await EventService.updateEvent(req.user as IJWTPayload, req);
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: "Event updated successfully",
+      data: event,
+    });
+  }
+);
+
+const deleteEvent = catchAsync(async (req: Request, res: Response) => {
+  const result = await EventService.deleteEvent(req);
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: "Event deleted Successfully",
+    data: null,
+  });
+});
+
 export const EventController = {
   createCategory,
   createEvent,
@@ -92,4 +174,10 @@ export const EventController = {
   getSingleEvent,
   getAllCategory,
   reviewEvent,
+  deleteEvent,
+  updateEvent,
+  getMyEvent,
+  getJoinedEvents,
+  leaveEvent,
+  getAllReview,
 };

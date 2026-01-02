@@ -2,6 +2,7 @@ import { UserRole } from "@prisma/client";
 import express, { NextFunction, Request, Response } from "express";
 import { fileUploader } from "../../helper/fileUploader";
 import auth from "../../middlewares/auth";
+
 import { UserController } from "./user.controller";
 import { UserValidation } from "./user.validation";
 
@@ -29,11 +30,7 @@ router.post(
 
 router.get("/", auth(UserRole.ADMIN), UserController.getAllUser);
 
-router.get(
-  "/all-interests",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  UserController.getAllInterests
-);
+router.get("/all-interests", UserController.getAllInterests);
 
 router.get(
   "/me",
@@ -42,9 +39,15 @@ router.get(
 );
 
 router.patch(
-  "/me/update-profile",
+  "/me/update-my-profile",
   auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  UserController.updateProfile
+  fileUploader.upload.single("file"),
+  (req: Request, res: Response, next: NextFunction) => {
+    req.body = UserValidation.updateUserValidationSchema.parse(
+      JSON.parse(req.body.data)
+    );
+    return UserController.updateProfile(req, res, next);
+  }
 );
 
 router.delete("/:id", auth(UserRole.ADMIN), UserController.deleteUser);

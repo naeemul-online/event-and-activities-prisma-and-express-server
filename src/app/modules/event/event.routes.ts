@@ -2,29 +2,27 @@ import { UserRole } from "@prisma/client";
 import express, { NextFunction, Request, Response } from "express";
 import { fileUploader } from "../../helper/fileUploader";
 import auth from "../../middlewares/auth";
+import optionalAuth from "../../middlewares/optionalAuth";
 import validateRequest from "../../middlewares/validateRequest";
 import { EventController } from "./event.controller";
 import { eventValidation } from "./event.validation";
 
 const router = express.Router();
 
-router.get(
-  "/all-events",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  EventController.getAllEvent
-);
+router.get("/all-events", EventController.getAllEvent);
+router.get("/all-reviews", EventController.getAllReview);
+
+router.get("/my-events", auth(UserRole.HOST), EventController.getMyEvent);
 
 router.get(
-  "/:id",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  EventController.getSingleEvent
+  "/joined-events",
+  auth(UserRole.USER),
+  EventController.getJoinedEvents
 );
 
-router.get(
-  "/all-events-categories",
-  auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  EventController.getAllCategory
-);
+router.get("/all-events-categories", EventController.getAllCategory);
+
+router.get("/:id", optionalAuth(), EventController.getSingleEvent);
 
 router.post(
   "/categories",
@@ -42,7 +40,7 @@ router.post(
 
 router.post(
   "/create-event",
-  auth(UserRole.HOST),
+  auth(UserRole.HOST, UserRole.ADMIN),
   fileUploader.upload.single("file"),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = eventValidation.createEventSchema.parse(
@@ -54,5 +52,27 @@ router.post(
 );
 
 router.post("/:eventId/join", auth(UserRole.USER), EventController.joinEvent);
+
+router.post("/:eventId/leave", auth(UserRole.USER), EventController.leaveEvent);
+
+router.patch(
+  "/:id",
+  auth(UserRole.HOST, UserRole.ADMIN),
+  fileUploader.upload.single("file"),
+  (req: Request, res: Response, next: NextFunction) => {
+    req.body = eventValidation.updateEventSchema.parse(
+      JSON.parse(req.body.data)
+    );
+    return EventController.updateEvent(req, res, next);
+  },
+
+  EventController.updateEvent
+);
+
+router.delete(
+  "/:id",
+  auth(UserRole.HOST, UserRole.ADMIN),
+  EventController.deleteEvent
+);
 
 export const eventRoutes = router;

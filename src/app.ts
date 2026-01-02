@@ -9,12 +9,18 @@ import config from "./config";
 
 const app: Application = express();
 
+/**
+ * ✅ STRIPE WEBHOOK — MUST BE FIRST
+ */
 app.post(
   "/webhook",
   express.raw({ type: "application/json" }),
   PaymentController.handleStripeWebhookEvent
 );
 
+/**
+ * ✅ ALL OTHER MIDDLEWARES AFTER
+ */
 app.use(
   cors({
     origin: config.frontendUrl,
@@ -22,11 +28,13 @@ app.use(
   })
 );
 
-//parser
-app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
+/**
+ * ✅ API ROUTES
+ */
 app.use("/api/v1", router);
 
 app.get("/", (req: Request, res: Response) => {
@@ -38,8 +46,10 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
+/**
+ * ✅ ERROR HANDLERS
+ */
 app.use(globalErrorHandler);
-
 app.use(notFound);
 
 export default app;

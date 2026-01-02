@@ -18,6 +18,23 @@ const createUserValidationSchema = z.object({
     .optional(),
 });
 
+const updateUserValidationSchema = z.object({
+  email: z.string().email().optional(),
+  password: z.string().min(8).optional(),
+
+  profile: z
+    .object({
+      fullName: z.string().min(1).optional(),
+      bio: z.string().optional(),
+      image: z.string().url().optional(),
+      location: z.string().optional(),
+    })
+    .optional(),
+
+  interestIds: z.array(z.number().int()).optional(),
+});
+
 export const UserValidation = {
   createUserValidationSchema,
+  updateUserValidationSchema,
 };

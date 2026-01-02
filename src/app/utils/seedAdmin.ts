@@ -13,6 +13,7 @@ export const seedSuperAdmin = async () => {
     });
 
     let adminUser;
+    let adminProfile;
 
     if (existingAdmin) {
       console.log("✅ Admin user already exists!!");
@@ -29,6 +30,16 @@ export const seedSuperAdmin = async () => {
           role: "ADMIN",
         },
       });
+
+      const profile = {
+        fullName: "Admin",
+        userId: adminUser.id,
+      };
+
+      await prisma.profile.create({
+        data: profile,
+      });
+
       console.log("✅ Admin user created successfully!!");
     }
   } catch (error) {

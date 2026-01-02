@@ -2,6 +2,9 @@ import { Server } from "http";
 import app from "./app";
 import { prisma } from "./app/shared/prisma";
 import { seedSuperAdmin } from "./app/utils/seedAdmin";
+
+import { seedInterestCategories } from "./app/utils/seedEventCategory";
+import { seedEventsCategories } from "./app/utils/seedUserInterests copy";
 import config from "./config";
 
 async function connectToDB() {
@@ -21,7 +24,8 @@ async function bootstrap() {
   try {
     await connectToDB();
     await seedSuperAdmin();
-
+    await seedInterestCategories();
+    await seedEventsCategories();
     // Start the server
     server = app.listen(config.port, () => {
       console.log(`🚀 Server is running on http://localhost:${config.port}`);
