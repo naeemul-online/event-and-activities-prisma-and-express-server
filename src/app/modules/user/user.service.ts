@@ -208,7 +208,7 @@ const updateProfile = async (authUser: IJWTPayload, req: Request) => {
 
 const deleteUser = async (req: Request) => {
   const result = await prisma.profile.delete({
-    where: { id: req.params.id },
+    where: { id: req.params.id as string },
   });
   return result;
 };

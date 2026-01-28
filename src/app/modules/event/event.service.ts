@@ -76,7 +76,7 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   if (new Date() < event.date) {
     throw new ApiError(
       httpStatus.FORBIDDEN,
-      "You can only review after the event ends"
+      "You can only review after the event ends",
     );
   }
 
@@ -92,7 +92,7 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
   if (!participant || participant.status !== "JOINED") {
     throw new ApiError(
       httpStatus.CONFLICT,
-      "You can only review events you joined"
+      "You can only review events you joined",
     );
   }
 
@@ -122,7 +122,7 @@ const reviewEvent = async (user: IJWTPayload, req: Request) => {
 
 const joinEvent = async (user: IJWTPayload, req: Request) => {
   const { email } = user;
-  const { eventId } = req.params;
+  const { eventId } = req.params as { eventId: string };
 
   // 1️⃣ Get user
   const dbUser = await prisma.user.findUniqueOrThrow({
@@ -168,7 +168,7 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
     if (latestPayment?.status === "PAID") {
       throw new ApiError(
         httpStatus.CONFLICT,
-        "You have already joined this event"
+        "You have already joined this event",
       );
     }
 
@@ -540,7 +540,7 @@ const getMyEvents = async (hostId: string, params: any, options: IOptions) => {
 const getUserJoinEvents = async (
   userId: string,
   params: any,
-  options: IOptions
+  options: IOptions,
 ) => {
   const { page, limit, skip, sortBy, sortOrder } =
     paginationHelper.calculatePagination(options);
@@ -702,7 +702,7 @@ const getUserJoinEvents = async (
 };
 
 const getSingleEvent = async (req: Request & { user?: any }) => {
-  const { id } = req.params;
+  const { id } = req.params as { id: string };
   const userId = req.user?.id;
 
   const event = await prisma.event.findUniqueOrThrow({
@@ -750,7 +750,7 @@ const getSingleEvent = async (req: Request & { user?: any }) => {
 
 const leaveEvent = async (user: IJWTPayload, req: Request) => {
   const { email } = user;
-  const { eventId } = req.params;
+  const { eventId } = req.params as { eventId: string };
 
   const dbUser = await prisma.user.findUniqueOrThrow({
     where: { email },
@@ -841,7 +841,7 @@ const updateEvent = async (user: IJWTPayload, req: Request) => {
 
   const result = await prisma.event.update({
     where: {
-      id: req.params.id,
+      id: req.params.id as string,
     },
     data: {
       title: req.body.title,
@@ -863,7 +863,7 @@ const updateEvent = async (user: IJWTPayload, req: Request) => {
 const deleteEvent = async (req: Request) => {
   const event = await prisma.event.delete({
     where: {
-      id: req.params.id,
+      id: req.params.id as string,
     },
   });
   return event;
