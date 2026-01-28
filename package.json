@@ -24,6 +24,8 @@
     "prisma": "^6.16.3",
     "@types/cookie-parser": "^1.4.10",
     "@types/multer": "^2.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/jsonwebtoken": "^9.0.10",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
@@ -38,9 +40,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.5.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
