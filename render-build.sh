@@ -1,5 +1,5 @@
 set -o errexit
-pnpm install
-pnpm run build
+npm install
+npm run build
 npx prisma generate
-npm prisma migrate deploy
+npx prisma migrate deploy
