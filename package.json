@@ -11,16 +11,17 @@
     "dev": "ts-node-dev --respawn --transpile-only ./src/server.ts",
     "build": "tsc",
     "start": "node ./dist/server.js",
-    "db:generate": "prisma generate --schema=./prisma/schema",
-    "db:migrate": "prisma migrate deploy --schema=./prisma/schema",
-    "db:push": "prisma db push --schema=./prisma/schema",
-    "db:pull": "prisma db pull --schema=./prisma/schema",
-    "db:studio": "prisma studio --schema=./prisma/schema",
+    "db:generate": "npx prisma generate --schema=./prisma/schema",
+    "db:migrate": "npx prisma migrate deploy --schema=./prisma/schema",
+    "db:push": "npx prisma db push --schema=./prisma/schema",
+    "db:pull": "npx prisma db pull --schema=./prisma/schema",
+    "db:studio": "npx prisma studio --schema=./prisma/schema",
     "postinstall": "npx prisma generate --schema=./prisma/schema",
     "stripe:webhook": "stripe listen --forward-to localhost:5001/webhook"
   },
   "dependencies": {
     "@prisma/client": "^6.16.3",
+    "prisma": "^6.16.3",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.7.0",
     "cookie-parser": "^1.4.7",
@@ -41,7 +42,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.5.0",
-    "prisma": "^6.16.3",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
   }
