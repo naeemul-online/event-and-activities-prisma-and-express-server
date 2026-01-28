@@ -10,7 +10,7 @@ import config from "./config";
 async function connectToDB() {
   try {
     await prisma.$connect();
-    console.log("✅ DB connection successfull!!");
+    console.log("✅ DB connection successful!!");
   } catch (error) {
     console.log("❌ DB connection failed!");
     process.exit(1);
@@ -46,7 +46,7 @@ async function bootstrap() {
     // Handle unhandled promise rejections
     process.on("unhandledRejection", (error) => {
       console.log(
-        "Unhandled Rejection is detected, we are closing our server..."
+        "Unhandled Rejection is detected, we are closing our server...",
       );
       if (server) {
         server.close(() => {
