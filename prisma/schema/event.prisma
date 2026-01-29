@@ -24,7 +24,7 @@ model Event {
 
 model EventParticipant {
     id       Int               @id @default(autoincrement())
-    event    Event             @relation(fields: [eventId], references: [id])
+    event    Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId  String
     user     User              @relation(fields: [userId], references: [id])
     userId   String
@@ -40,7 +40,7 @@ model SavedEvent {
     id      Int      @id @default(autoincrement())
     user    User     @relation(fields: [userId], references: [id])
     userId  String
-    event   Event    @relation(fields: [eventId], references: [id])
+    event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId String
     savedAt DateTime @default(now())
 

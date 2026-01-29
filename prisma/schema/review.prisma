@@ -1,6 +1,6 @@
 model Review {
     id       String @id @default(uuid())
-    event    Event  @relation(fields: [eventId], references: [id])
+    event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId  String
     rating   Int    @db.SmallInt
     reviewer User   @relation(fields: [userId], references: [id])

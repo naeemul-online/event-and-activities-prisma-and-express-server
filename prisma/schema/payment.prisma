@@ -3,7 +3,7 @@ model Payment {
     amount          Decimal       @db.Decimal(10, 2)
     currency        String        @default("USD")
     status          PaymentStatus @default(PENDING)
-    event           Event         @relation(fields: [eventId], references: [id])
+    event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId         String
     user            User          @relation(fields: [userId], references: [id])
     userId          String
