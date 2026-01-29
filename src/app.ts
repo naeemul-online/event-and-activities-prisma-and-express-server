@@ -15,17 +15,18 @@ const app: Application = express();
 app.post(
   "/webhook",
   express.raw({ type: "application/json" }),
-  PaymentController.handleStripeWebhookEvent
+  PaymentController.handleStripeWebhookEvent,
 );
 
 /**
  * ✅ ALL OTHER MIDDLEWARES AFTER
  */
+
 app.use(
   cors({
-    origin: config.frontendUrl,
+    origin: [config.frontendUrl || "http://localhost:3001"],
     credentials: true,
-  })
+  }),
 );
 
 app.use(cookieParser());
