@@ -158,8 +158,6 @@ const joinEvent = async (user: IJWTPayload, req: Request) => {
     orderBy: { createdAt: "desc" },
   });
 
-  console.log(latestPayment);
-
   /**
    * 🔁 ALREADY EXISTS CASE
    */

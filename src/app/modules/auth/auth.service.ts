@@ -29,13 +29,13 @@ const login = async (payload: { email: string; password: string }) => {
       role: user.role,
     },
     config.jwt_access_token_secret!,
-    "1d"
+    "1d",
   );
 
   const refreshToken = await jwtHelper.generateToken(
     { email: user.email, role: user.role },
     config.jwt_refresh_token_secret!,
-    "90d"
+    "90d",
   );
 
   return {
@@ -48,7 +48,7 @@ const getMe = async (session: any) => {
   const accessToken = session.accessToken;
   const decodedData = jwtHelper.verifyToken(
     accessToken,
-    config.jwt_access_token_secret as string
+    config.jwt_access_token_secret as string,
   );
 
   const userData = await prisma.user.findUniqueOrThrow({
@@ -57,8 +57,6 @@ const getMe = async (session: any) => {
     },
     include: { profile: true },
   });
-
-  console.log(userData);
 
   const { id, email, role, profile } = userData;
 

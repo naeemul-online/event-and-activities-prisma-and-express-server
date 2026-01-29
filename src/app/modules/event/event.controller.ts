@@ -25,7 +25,7 @@ const createEvent = catchAsync(
       message: "Event created successfully",
       data: event,
     });
-  }
+  },
 );
 
 const joinEvent = catchAsync(
@@ -37,7 +37,7 @@ const joinEvent = catchAsync(
       message: "Please pay for join successfully",
       data: event.data,
     });
-  }
+  },
 );
 
 const leaveEvent = catchAsync(
@@ -49,7 +49,7 @@ const leaveEvent = catchAsync(
       message: "Please pay for join successfully",
       data: event.message,
     });
-  }
+  },
 );
 
 const reviewEvent = catchAsync(
@@ -61,7 +61,7 @@ const reviewEvent = catchAsync(
       message: "Review successfully submitted",
       data: review,
     });
-  }
+  },
 );
 
 const getAllEvent = catchAsync(async (req: Request, res: Response) => {
@@ -89,7 +89,6 @@ const getAllReview = catchAsync(async (req: Request, res: Response) => {
 const getMyEvent = catchAsync(
   async (req: Request & { user?: IJWTPayload }, res: Response) => {
     const user = req.user;
-    console.log(user);
     const filters = pick(req.query, eventFilterableFields);
     const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
     const event = await EventService.getMyEvents(user!.id, filters, options);
@@ -100,7 +99,7 @@ const getMyEvent = catchAsync(
       meta: event.meta,
       data: event.data,
     });
-  }
+  },
 );
 
 const getJoinedEvents = catchAsync(
@@ -112,7 +111,7 @@ const getJoinedEvents = catchAsync(
     const event = await EventService.getUserJoinEvents(
       user!.id,
       filters,
-      options
+      options,
     );
     sendResponse(res, {
       statusCode: 201,
@@ -121,7 +120,7 @@ const getJoinedEvents = catchAsync(
       meta: event.meta,
       data: event.data,
     });
-  }
+  },
 );
 
 const getSingleEvent = catchAsync(async (req: Request, res: Response) => {
@@ -153,7 +152,7 @@ const updateEvent = catchAsync(
       message: "Event updated successfully",
       data: event,
     });
-  }
+  },
 );
 
 const deleteEvent = catchAsync(async (req: Request, res: Response) => {
