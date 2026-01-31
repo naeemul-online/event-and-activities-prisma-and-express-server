@@ -155,6 +155,15 @@ const getMyProfile = async (payload: IJWTPayload) => {
   return profile;
 };
 
+const getUser = async (req: Request) => {
+  const userId = req.params.id as string;
+  const user = await prisma.user.findUniqueOrThrow({
+    where: { id: userId },
+    include: { profile: true },
+  });
+  return user;
+};
+
 const updateProfile = async (authUser: IJWTPayload, req: Request) => {
   if (req.file) {
     const uploadResult = await fileUploader.uploadToCloudinary(req.file);
@@ -205,9 +214,60 @@ const updateProfile = async (authUser: IJWTPayload, req: Request) => {
 
   return result;
 };
+const updateUser = async (authUser: IJWTPayload, req: Request) => {
+  const { id } = req.params as { id: string };
+  if (req.file) {
+    const uploadResult = await fileUploader.uploadToCloudinary(req.file);
+    req.body.profile.image = uploadResult?.secure_url as string;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: id },
+    include: { profile: true },
+  });
+
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, "User not found");
+  }
+
+  const updateUserData: any = {};
+  const updateProfileData: any = {};
+
+  // 🔐 Password update (optional)
+  if (req.body.password) {
+    updateUserData.password = await bcrypt.hash(req.body.password, 10);
+  }
+
+  if (req.body.role) {
+    updateUserData.role = req.body.role;
+  }
+
+  // 🧾 Profile update
+  if (req.body.profile) {
+    Object.assign(updateProfileData, req.body.profile);
+  }
+
+  // 🔁 Transaction (important!)
+  const result = await prisma.$transaction(async (tx) => {
+    if (Object.keys(updateProfileData).length && user.profile?.id) {
+      await tx.profile.update({
+        where: { id: user.profile.id },
+        data: updateProfileData,
+      });
+    }
+
+    return tx.user.update({
+      where: { id: user.id },
+      data: updateUserData,
+      include: { profile: true },
+    });
+  });
+
+  return result;
+};
 
 const deleteUser = async (req: Request) => {
-  const result = await prisma.profile.delete({
+  const result = await prisma.user.delete({
     where: { id: req.params.id as string },
   });
   return result;
@@ -221,4 +281,6 @@ export const UserService = {
   updateProfile,
   createInterest,
   getAllInterests,
+  getUser,
+  updateUser,
 };

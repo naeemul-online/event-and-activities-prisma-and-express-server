@@ -13,17 +13,17 @@ router.post(
   fileUploader.upload.single("file"),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = UserValidation.createUserValidationSchema.parse(
-      JSON.parse(req.body.data)
+      JSON.parse(req.body.data),
     );
 
     return UserController.createUser(req, res, next);
-  }
+  },
 );
 
 router.post(
   "/create-interest",
   auth(UserRole.ADMIN),
-  UserController.createInterest
+  UserController.createInterest,
 );
 
 // data with access token in cookie -> check the role -> give access to the protected route
@@ -35,8 +35,10 @@ router.get("/all-interests", UserController.getAllInterests);
 router.get(
   "/me",
   auth(UserRole.ADMIN, UserRole.HOST, UserRole.USER),
-  UserController.getMyProfile
+  UserController.getMyProfile,
 );
+
+router.get("/:id", auth(UserRole.ADMIN), UserController.getUser);
 
 router.patch(
   "/me/update-my-profile",
@@ -44,10 +46,22 @@ router.patch(
   fileUploader.upload.single("file"),
   (req: Request, res: Response, next: NextFunction) => {
     req.body = UserValidation.updateUserValidationSchema.parse(
-      JSON.parse(req.body.data)
+      JSON.parse(req.body.data),
     );
     return UserController.updateProfile(req, res, next);
-  }
+  },
+);
+
+router.patch(
+  "/:id",
+  auth(UserRole.ADMIN),
+  fileUploader.upload.single("file"),
+  (req: Request, res: Response, next: NextFunction) => {
+    req.body = UserValidation.updateUserValidationSchema.parse(
+      JSON.parse(req.body.data),
+    );
+    return UserController.updateUser(req, res, next);
+  },
 );
 
 router.delete("/:id", auth(UserRole.ADMIN), UserController.deleteUser);

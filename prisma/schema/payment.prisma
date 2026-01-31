@@ -5,7 +5,7 @@ model Payment {
     status          PaymentStatus @default(PENDING)
     event           Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
     eventId         String
-    user            User          @relation(fields: [userId], references: [id])
+    user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId          String
     paymentIntentId String?       @unique
     transactionId   String? // gateway transaction id
