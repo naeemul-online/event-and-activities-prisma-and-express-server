@@ -29,7 +29,7 @@ https://event-and-activities-prisma-and-express.onrender.com
 
 **Admin Credentials** (for demo purposes only):  
 - Email: `admin@gmail.com`  
-- Password: `Admin@123`
+- Password: `Admin*****`
 
 > **Security Note:** These credentials are for testing only. Change them immediately in production environments.
 
