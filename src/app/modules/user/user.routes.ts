@@ -28,6 +28,21 @@ router.post(
 
 // data with access token in cookie -> check the role -> give access to the protected route
 
+// dashboard state
+
+router.get("/summary", auth(UserRole.USER), UserController.getUserSummary);
+router.get(
+  "/upcoming-events",
+  auth(UserRole.USER),
+  UserController.getUserUpcomingEvents,
+);
+
+router.get(
+  "/recent-participants",
+  auth(UserRole.USER),
+  UserController.getUserRecentParticipants,
+);
+
 router.get("/", auth(UserRole.ADMIN), UserController.getAllUser);
 
 router.get("/all-interests", UserController.getAllInterests);

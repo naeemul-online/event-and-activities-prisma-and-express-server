@@ -1,4 +1,5 @@
 import express from "express";
+import { adminRoutes } from "../modules/admin/admin.routes";
 import { authRoutes } from "../modules/auth/auth.route";
 import { eventRoutes } from "../modules/event/event.routes";
 import { hostRoutes } from "../modules/host/host.route";
@@ -14,6 +15,10 @@ const moduleRoutes = [
   {
     path: "/hosts",
     route: hostRoutes,
+  },
+  {
+    path: "/dashboard",
+    route: adminRoutes,
   },
   {
     path: "/auth",

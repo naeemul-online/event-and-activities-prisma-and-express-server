@@ -164,6 +164,72 @@ const getUser = async (req: Request) => {
   return user;
 };
 
+/* Dashboard State */
+
+const getUserSummary = async (userId: string) => {
+  const joined = await prisma.eventParticipant.count({
+    where: { userId },
+  });
+
+  const upcoming = await prisma.eventParticipant.count({
+    where: {
+      userId,
+      event: {
+        date: { gte: new Date() },
+      },
+    },
+  });
+
+  const completed = await prisma.eventParticipant.count({
+    where: {
+      userId,
+      event: {
+        date: { lt: new Date() },
+      },
+    },
+  });
+
+  return {
+    joined,
+    upcoming,
+    completed,
+  };
+};
+
+const getUserUpcomingEvents = async (userId: string) => {
+  return prisma.eventParticipant.findMany({
+    where: {
+      userId,
+      event: {
+        date: { gte: new Date() },
+      },
+    },
+    include: {
+      event: true,
+    },
+    orderBy: {
+      event: { date: "asc" },
+    },
+    take: 5,
+  });
+};
+
+const getUserRecentParticipants = async (userId: string) => {
+  return prisma.eventParticipant.findMany({
+    where: {
+      userId,
+    },
+    include: {
+      user: {
+        include: { profile: true },
+      },
+      event: true,
+    },
+    orderBy: { joinedAt: "desc" },
+    take: 5,
+  });
+};
+
 const updateProfile = async (authUser: IJWTPayload, req: Request) => {
   if (req.file) {
     const uploadResult = await fileUploader.uploadToCloudinary(req.file);
@@ -283,4 +349,7 @@ export const UserService = {
   getAllInterests,
   getUser,
   updateUser,
+  getUserSummary,
+  getUserUpcomingEvents,
+  getUserRecentParticipants,
 };

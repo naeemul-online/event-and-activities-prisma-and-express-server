@@ -27,6 +27,51 @@ const createInterest = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+/* Dashboard State */
+const getUserSummary = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const userId = req.user?.id as string;
+
+    const result = await UserService.getUserSummary(userId);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "User dashboard summary fetched successfully",
+      data: result,
+    });
+  },
+);
+
+const getUserUpcomingEvents = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res: Response) => {
+    const userId = req.user?.id as string;
+
+    const result = await UserService.getUserUpcomingEvents(userId);
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Upcoming events fetched successfully",
+      data: result,
+    });
+  },
+);
+
+const getUserRecentParticipants = catchAsync(
+  async (req: Request & { user?: IJWTPayload }, res) => {
+    const userId = req?.user?.id as string;
+
+    const result = await UserService.getUserRecentParticipants(userId);
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "User recent participants fetched successfully",
+      data: result,
+    });
+  },
+);
+
 const getAllUser = catchAsync(async (req: Request, res: Response) => {
   const filters = pick(req.query, userFilterableFields);
   const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"]);
@@ -120,4 +165,7 @@ export const UserController = {
   getAllInterests,
   getUser,
   updateUser,
+  getUserSummary,
+  getUserUpcomingEvents,
+  getUserRecentParticipants,
 };
